@@ -1,0 +1,7 @@
+for apk- 
+cd /Users/ananyaraghuveer/edureel_app
+flutter pub get
+flutter build apk --release
+
+to run flutter app - 
+flutter run -d chrome
