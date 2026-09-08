@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_state.dart';
+import 'app_theme.dart';
 
 // ── Shared slide card used in liked/saved pages ───────────────────────────────
 class SlideCard extends StatelessWidget {
@@ -7,7 +8,8 @@ class SlideCard extends StatelessWidget {
   final Color accentColor;
   final IconData trailingIcon;
 
-  const SlideCard({super.key, 
+  const SlideCard({
+    super.key,
     required this.slideIndex,
     required this.accentColor,
     required this.trailingIcon,
@@ -15,19 +17,22 @@ class SlideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: GlassPanel(
+        padding: const EdgeInsets.all(16),
+        radius: 21,
         gradient: LinearGradient(
-          colors: [Color(0xFF1A1F2E), Color(0xFF18191C)],
+          colors: [
+            Color.alphaBlend(
+              accentColor.withValues(alpha: 0.20),
+              context.appPanelTop,
+            ),
+            context.appPanelBottom,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accentColor.withOpacity(0.3), width: 1),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -36,13 +41,19 @@ class SlideCard extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Color(0xFF2563eb).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(0xFF2563eb).withOpacity(0.4)),
+                    color: context.appAccent.withValues(alpha: 0.17),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: context.appAccent.withValues(alpha: 0.36),
+                    ),
                   ),
                   child: Text(
                     topics[slideIndex],
-                    style: TextStyle(color: Color(0xFF2563eb), fontWeight: FontWeight.bold, fontSize: 11),
+                    style: TextStyle(
+                      color: context.appAccent,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
                   ),
                 ),
                 Spacer(),
@@ -50,17 +61,34 @@ class SlideCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 10),
-            Text(headings[slideIndex],
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17, height: 1.2)),
+            Text(
+              headings[slideIndex],
+              style: TextStyle(
+                color: context.appText,
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                height: 1.2,
+              ),
+            ),
             SizedBox(height: 6),
-            Text(descriptions[slideIndex],
-                style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
+            Text(
+              descriptions[slideIndex],
+              style: TextStyle(
+                color: context.appMutedText,
+                fontSize: 13,
+                height: 1.4,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
             SizedBox(height: 12),
             Container(
-              width: 50, height: 3,
-              decoration: BoxDecoration(color: Color(0xFF2563eb), borderRadius: BorderRadius.circular(2)),
+              width: 50,
+              height: 3,
+              decoration: BoxDecoration(
+                color: context.appAccent,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ],
         ),
@@ -75,7 +103,12 @@ class EmptyState extends StatelessWidget {
   final String message;
   final String sub;
 
-  const EmptyState({super.key, required this.icon, required this.message, required this.sub});
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.message,
+    required this.sub,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -83,11 +116,17 @@ class EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white12, size: 64),
+          Icon(icon, color: context.appFaintText, size: 64),
           SizedBox(height: 16),
-          Text(message, style: TextStyle(color: Colors.white38, fontSize: 16)),
+          Text(
+            message,
+            style: TextStyle(color: context.appMutedText, fontSize: 16),
+          ),
           SizedBox(height: 8),
-          Text(sub, style: TextStyle(color: Colors.white24, fontSize: 13)),
+          Text(
+            sub,
+            style: TextStyle(color: context.appSubtleText, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -109,25 +148,38 @@ class _SaveToFolderSheetState extends State<SaveToFolderSheet> {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Color(0xFF1E1F24),
+        backgroundColor: ctx.appCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text("New Folder", style: TextStyle(color: Colors.white)),
+        title: Text("New Folder", style: TextStyle(color: ctx.appText)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: ctx.appText),
           decoration: InputDecoration(
             hintText: "Folder name...",
-            hintStyle: TextStyle(color: Colors.white38),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF2563eb))),
+            hintStyle: TextStyle(color: ctx.appSubtleText),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: ctx.appBorder),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: ctx.appAccent),
+            ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("Cancel", style: TextStyle(color: Colors.white54))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("Cancel", style: TextStyle(color: ctx.appMutedText)),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: Text("Create", style: TextStyle(color: Color(0xFF2563eb), fontWeight: FontWeight.bold)),
+            child: Text(
+              "Create",
+              style: TextStyle(
+                color: ctx.appAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -142,7 +194,7 @@ class _SaveToFolderSheetState extends State<SaveToFolderSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Saved to "$name"'),
-          backgroundColor: Color(0xFF2563eb),
+          backgroundColor: context.appAccent,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -153,8 +205,17 @@ class _SaveToFolderSheetState extends State<SaveToFolderSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Color(0xFF1A1B1F),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [context.appPanelTop, context.appPanelBottom],
+        ),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(
+          top: BorderSide(color: context.appCardBorder),
+          left: BorderSide(color: context.appCardBorder),
+          right: BorderSide(color: context.appCardBorder),
+        ),
       ),
       padding: EdgeInsets.fromLTRB(20, 16, 20, 32),
       child: Column(
@@ -163,15 +224,28 @@ class _SaveToFolderSheetState extends State<SaveToFolderSheet> {
         children: [
           Center(
             child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.appBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
           SizedBox(height: 20),
-          Text("Save to Folder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(
+            "Save to Folder",
+            style: TextStyle(
+              color: context.appText,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
           SizedBox(height: 6),
-          Text("Choose an existing folder or create a new one.",
-              style: TextStyle(color: Colors.white54, fontSize: 13)),
+          Text(
+            "Choose an existing folder or create a new one.",
+            style: TextStyle(color: context.appMutedText, fontSize: 13),
+          ),
           SizedBox(height: 20),
           // Create new folder tile
           ListTile(
@@ -179,16 +253,31 @@ class _SaveToFolderSheetState extends State<SaveToFolderSheet> {
             contentPadding: EdgeInsets.zero,
             leading: Container(
               padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Color(0xFF2563eb).withOpacity(0.15), shape: BoxShape.circle),
-              child: Icon(Icons.create_new_folder_outlined, color: Color(0xFF2563eb), size: 22),
+              decoration: BoxDecoration(
+                color: context.appAccent.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.create_new_folder_outlined,
+                color: context.appAccent,
+                size: 22,
+              ),
             ),
-            title: Text("Create New Folder", style: TextStyle(color: Color(0xFF2563eb), fontWeight: FontWeight.bold)),
+            title: Text(
+              "Create New Folder",
+              style: TextStyle(
+                color: context.appAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           if (savedFolders.isNotEmpty) ...[
-            Divider(color: Colors.white12),
+            Divider(color: context.appBorder),
             SizedBox(height: 4),
             ...savedFolders.keys.map((folderName) {
-              final isSaved = savedFolders[folderName]!.contains(widget.slideIndex);
+              final isSaved = savedFolders[folderName]!.contains(
+                widget.slideIndex,
+              );
               return ListTile(
                 onTap: () {
                   setState(() {
@@ -201,8 +290,12 @@ class _SaveToFolderSheetState extends State<SaveToFolderSheet> {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(isSaved ? 'Removed from "$folderName"' : 'Saved to "$folderName"'),
-                      backgroundColor: Color(0xFF2563eb),
+                      content: Text(
+                        isSaved
+                            ? 'Removed from "$folderName"'
+                            : 'Saved to "$folderName"',
+                      ),
+                      backgroundColor: context.appAccent,
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -211,19 +304,32 @@ class _SaveToFolderSheetState extends State<SaveToFolderSheet> {
                 leading: Container(
                   padding: EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isSaved ? Color(0xFF2563eb).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                    color: isSaved
+                        ? context.appAccent.withOpacity(0.2)
+                        : context.appText.withOpacity(0.05),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     isSaved ? Icons.folder : Icons.folder_outlined,
-                    color: isSaved ? Color(0xFF2563eb) : Colors.white54,
+                    color: isSaved ? context.appAccent : context.appMutedText,
                     size: 22,
                   ),
                 ),
-                title: Text(folderName, style: TextStyle(color: Colors.white, fontSize: 15)),
-                subtitle: Text("${savedFolders[folderName]!.length} slides",
-                    style: TextStyle(color: Colors.white38, fontSize: 12)),
-                trailing: isSaved ? Icon(Icons.check_circle, color: Color(0xFF2563eb), size: 20) : null,
+                title: Text(
+                  folderName,
+                  style: TextStyle(color: context.appText, fontSize: 15),
+                ),
+                subtitle: Text(
+                  "${savedFolders[folderName]!.length} slides",
+                  style: TextStyle(color: context.appSubtleText, fontSize: 12),
+                ),
+                trailing: isSaved
+                    ? Icon(
+                        Icons.check_circle,
+                        color: context.appAccent,
+                        size: 20,
+                      )
+                    : null,
               );
             }),
           ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'app_state.dart';
 import 'app_theme.dart';
 import 'reel_screen.dart';
@@ -42,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: selectedIndex,
         children: [
@@ -56,33 +58,54 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-        child: Container(
-          color: context.appSurface,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          child: Row(
-            children: [
-              _NavTab(
-                icon: Icons.play_arrow,
-                label: "REELS",
-                isSelected: selectedIndex == 0,
-                onTap: () => onItemTapped(0),
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.appNavigation,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: context.isDarkMode
+                      ? const Color(0x4DFFFFFF)
+                      : const Color(0x26000000),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                      alpha: context.isDarkMode ? 0.34 : 0.12,
+                    ),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              _NavTab(
-                icon: Icons.dashboard,
-                label: "DASHBOARD",
-                isSelected: selectedIndex == 1,
-                onTap: () => onItemTapped(1),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+              child: Row(
+                children: [
+                  _NavTab(
+                    icon: Icons.play_arrow_rounded,
+                    label: "REELS",
+                    isSelected: selectedIndex == 0,
+                    onTap: () => onItemTapped(0),
+                  ),
+                  _NavTab(
+                    icon: Icons.grid_view_rounded,
+                    label: "DASHBOARD",
+                    isSelected: selectedIndex == 1,
+                    onTap: () => onItemTapped(1),
+                  ),
+                  _NavTab(
+                    icon: Icons.person_outline_rounded,
+                    label: "MENU",
+                    isSelected: selectedIndex == 2,
+                    onTap: () => onItemTapped(2),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              _NavTab(
-                icon: Icons.menu,
-                label: "MENU",
-                isSelected: selectedIndex == 2,
-                onTap: () => onItemTapped(2),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -110,25 +133,46 @@ class _NavTab extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? context.appAccent : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            color: isSelected
+                ? (context.isDarkMode
+                      ? const Color(0xFF303030)
+                      : const Color(0xFFEAEAEA))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: context.isDarkMode ? 0.28 : 0.10,
+                      ),
+                      blurRadius: 18,
+                      offset: const Offset(0, 5),
+                    ),
+                  ]
+                : null,
           ),
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                color: isSelected ? context.appOnAccent : context.appText,
-                size: 20,
+                color: isSelected
+                    ? (context.isDarkMode ? context.appOnDark : context.appText)
+                    : context.appText.withValues(alpha: 0.72),
+                size: 19,
               ),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? context.appOnAccent : context.appText,
+                  color: isSelected
+                      ? (context.isDarkMode
+                            ? context.appOnDark
+                            : context.appText)
+                      : context.appText.withValues(alpha: 0.72),
                   fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  letterSpacing: 0.8,
+                  fontSize: 9,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
@@ -152,30 +196,32 @@ class _MenuScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        children: [
-          _MenuItem(
-            icon: Icons.person_outline,
-            label: 'Profile',
-            page: const ProfilePage(),
-          ),
-          _MenuItem(
-            icon: Icons.favorite_border,
-            label: 'Liked Videos',
-            page: const LikedVideosPage(),
-          ),
-          _MenuItem(
-            icon: Icons.bookmark_border,
-            label: 'Saved Videos',
-            page: const SavedVideosPage(),
-          ),
-          _MenuItem(
-            icon: Icons.settings_outlined,
-            label: 'Settings',
-            page: const _SettingsPage(),
-          ),
-        ],
+      body: AppVisualBackground(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          children: [
+            _MenuItem(
+              icon: Icons.person_outline,
+              label: 'Profile',
+              page: const ProfilePage(),
+            ),
+            _MenuItem(
+              icon: Icons.favorite_border,
+              label: 'Liked Videos',
+              page: const LikedVideosPage(),
+            ),
+            _MenuItem(
+              icon: Icons.bookmark_border,
+              label: 'Saved Videos',
+              page: const SavedVideosPage(),
+            ),
+            _MenuItem(
+              icon: Icons.settings_outlined,
+              label: 'Settings',
+              page: const _SettingsPage(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -194,51 +240,57 @@ class _SettingsPage extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        children: [
-          Text(
-            'Appearance',
-            style: TextStyle(
-              color: context.appText,
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
+      body: AppVisualBackground(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          children: [
+            Text(
+              'Appearance',
+              style: TextStyle(
+                color: context.appText,
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: appThemeMode,
-            builder: (context, themeMode, child) {
-              final isDarkMode = themeMode == ThemeMode.dark;
-              return SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: Icon(
-                  isDarkMode
-                      ? Icons.dark_mode_outlined
-                      : Icons.light_mode_outlined,
-                  color: context.appAccent,
-                ),
-                title: Text(
-                  isDarkMode ? 'Dark mode' : 'Light mode',
-                  style: TextStyle(color: context.appText),
-                ),
-                subtitle: Text(
-                  isDarkMode
-                      ? 'Dark appearance is on'
-                      : 'Light appearance is on',
-                  style: TextStyle(color: context.appMutedText),
-                ),
-                value: isDarkMode,
-                activeThumbColor: context.appAccent,
-                onChanged: (enabled) {
-                  appThemeMode.value = enabled
-                      ? ThemeMode.dark
-                      : ThemeMode.light;
-                },
-              );
-            },
-          ),
-        ],
+            const SizedBox(height: 8),
+            ValueListenableBuilder<ThemeMode>(
+              valueListenable: appThemeMode,
+              builder: (context, themeMode, child) {
+                final isDarkMode = themeMode == ThemeMode.dark;
+                return GlassPanel(
+                  padding: EdgeInsets.zero,
+                  radius: 20,
+                  child: SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    secondary: Icon(
+                      isDarkMode
+                          ? Icons.dark_mode_outlined
+                          : Icons.light_mode_outlined,
+                      color: context.appAccent,
+                    ),
+                    title: Text(
+                      isDarkMode ? 'Dark mode' : 'Light mode',
+                      style: TextStyle(color: context.appText),
+                    ),
+                    subtitle: Text(
+                      isDarkMode
+                          ? 'Dark appearance is on'
+                          : 'Light appearance is on',
+                      style: TextStyle(color: context.appMutedText),
+                    ),
+                    value: isDarkMode,
+                    activeThumbColor: context.appAccent,
+                    onChanged: (enabled) {
+                      appThemeMode.value = enabled
+                          ? ThemeMode.dark
+                          : ThemeMode.light;
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -257,12 +309,26 @@ class _MenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: context.appAccent),
-      title: Text(label, style: TextStyle(color: context.appText)),
-      trailing: Icon(Icons.chevron_right, color: context.appMutedText),
-      onTap: () =>
-          Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassPanel(
+        padding: EdgeInsets.zero,
+        radius: 20,
+        onTap: () =>
+            Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: context.appAccent.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: context.appAccent),
+          ),
+          title: Text(label, style: TextStyle(color: context.appText)),
+          trailing: Icon(Icons.chevron_right, color: context.appMutedText),
+        ),
+      ),
     );
   }
 }

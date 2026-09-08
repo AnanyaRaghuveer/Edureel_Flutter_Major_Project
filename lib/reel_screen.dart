@@ -170,28 +170,32 @@ class _ReelScreenState extends State<ReelScreen> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
-        backgroundColor: context.appBackground,
-        body: Center(
-          child: CircularProgressIndicator(color: context.appAccent),
+        backgroundColor: Colors.transparent,
+        body: AppVisualBackground(
+          child: Center(
+            child: CircularProgressIndicator(color: context.appAccent),
+          ),
         ),
       );
     }
 
     if (dbReels.isEmpty) {
       return Scaffold(
-        backgroundColor: context.appBackground,
-        body: Center(
-          child: Text(
-            "No videos found. Upload some shorts from the React web dashboard!",
-            style: TextStyle(color: context.appText),
-            textAlign: TextAlign.center,
+        backgroundColor: Colors.transparent,
+        body: AppVisualBackground(
+          child: Center(
+            child: Text(
+              "No videos found. Upload some shorts from the React web dashboard!",
+              style: TextStyle(color: context.appText),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: PageView.builder(
           scrollDirection: Axis.vertical,
@@ -244,7 +248,20 @@ class _ReelScreenState extends State<ReelScreen> {
                           ),
                     ),
                   ),
-                  Container(color: Colors.black.withOpacity(0.25)),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x91060606),
+                          Color(0x180F0F0F),
+                          Color(0xC71B1B1B),
+                        ],
+                        stops: [0, 0.42, 1],
+                      ),
+                    ),
+                  ),
                   if (playbackFeedbackReelId == reelId)
                     Center(
                       child: Container(
@@ -274,22 +291,36 @@ class _ReelScreenState extends State<ReelScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
-                                children: [
-                                  Icon(
-                                    Icons.verified_user,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    "For You",
-                                    style: TextStyle(
+                              GlassPanel(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                  vertical: 7,
+                                ),
+                                radius: 17,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xA82B2B2B),
+                                    Color(0xA3181818),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.verified_user,
                                       color: Colors.white,
-                                      fontWeight: FontWeight.bold,
+                                      size: 17,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 6),
+                                    Text(
+                                      "For You",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               const Spacer(),
                               Container(
@@ -298,13 +329,16 @@ class _ReelScreenState extends State<ReelScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: const Color(0xB21B1B1B),
+                                  borderRadius: BorderRadius.circular(13),
+                                  border: Border.all(
+                                    color: const Color(0x45FFFFFF),
+                                  ),
                                 ),
                                 child: const Text(
                                   "DATABASE SHORTS",
                                   style: TextStyle(
-                                    color: Color(0xFF2563eb),
+                                    color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                     letterSpacing: 1.1,
@@ -447,10 +481,11 @@ class _ReelActions extends StatelessWidget {
     }.toList()..sort();
     final folder = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: context.appSurface,
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) => SafeArea(
-        child: Padding(
+        child: GlassPanel(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          radius: 24,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,7 +525,7 @@ class _ReelActions extends StatelessWidget {
                   final name = await showDialog<String>(
                     context: sheetContext,
                     builder: (dialogContext) => AlertDialog(
-                      backgroundColor: dialogContext.appSurface,
+                      backgroundColor: dialogContext.appCard,
                       title: Text(
                         'New folder',
                         style: TextStyle(color: dialogContext.appText),
@@ -565,7 +600,7 @@ class _ReelActions extends StatelessWidget {
         const SizedBox(height: 18),
         _ActionButton(
           icon: saved ? Icons.bookmark : Icons.bookmark_border,
-          color: saved ? const Color(0xFF2563eb) : Colors.white,
+          color: Colors.white,
           label: 'Save',
           onTap: () => _chooseFolder(context),
         ),
@@ -594,22 +629,29 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(28),
-    child: Column(
-      children: [
-        Icon(icon, color: color, size: 32),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+  Widget build(BuildContext context) => SizedBox(
+    width: 62,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 27),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   );
 }

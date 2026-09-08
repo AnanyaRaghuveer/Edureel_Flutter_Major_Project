@@ -3,352 +3,87 @@ import 'app_state.dart';
 import 'app_theme.dart';
 import 'pages.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   final VoidCallback onNavigateToFeed;
   const DashboardScreen({super.key, required this.onNavigateToFeed});
 
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  void _navigateToSlide(int index) {
-    jumpToSlide(index);
-    widget.onNavigateToFeed();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final totalSaved = savedFolders.values.fold<int>(0, (s, v) => s + v.length);
-
+    final name = userName.trim().isEmpty ? 'there' : userName.trim();
     return Scaffold(
-      backgroundColor: context.appBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Top Bar ─────────────────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Dashboard",
-                    style: TextStyle(
-                      color: context.appText,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                    ),
-                  ),
-                  Text(
-                    userName.isEmpty ? 'User' : userName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.appMutedText,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 28),
-
-              // ── Heading ──────────────────────────────────────────────────
-              Text(
-                "Learning Progress",
-                style: TextStyle(
-                  color: context.appText,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 28,
-                  letterSpacing: -1.2,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                "Your daily knowledge intake at a glance.",
-                style: TextStyle(color: context.appMutedText, fontSize: 14),
-              ),
-              SizedBox(height: 24),
-
-              // ── Stats Grid ───────────────────────────────────────────────
-              Row(
-                children: [
-                  _StatCard(
-                    icon: Icons.favorite,
-                    iconColor: Colors.redAccent,
-                    label: "Liked",
-                    value: "${likedSlides.length}",
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => LikedVideosPage()),
-                    ).then((_) => setState(() {})),
-                  ),
-                  SizedBox(width: 12),
-                  _StatCard(
-                    icon: Icons.bookmark,
-                    iconColor: context.appAccent,
-                    label: "Saved",
-                    value: "$totalSaved",
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => SavedVideosPage()),
-                    ).then((_) => setState(() {})),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  _StatCard(
-                    icon: Icons.folder,
-                    iconColor: Color(0xFFFFB74D),
-                    label: "Folders",
-                    value: "${savedFolders.length}",
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => SavedVideosPage()),
-                    ).then((_) => setState(() {})),
-                  ),
-                  SizedBox(width: 12),
-                  _StatCard(
-                    icon: Icons.auto_stories,
-                    iconColor: Color(0xFF9C7CFF),
-                    label: "Topics",
-                    value: "${topics.length}",
-                  ),
-                ],
-              ),
-              SizedBox(height: 24),
-
-              // ── Deep Focus Card ──────────────────────────────────────────
-              _InfoCard(
-                gradient: LinearGradient(
-                  colors: [
-                    Color.alphaBlend(
-                      context.appAccent.withValues(alpha: 0.18),
-                      context.appSurface,
-                    ),
-                    context.appSurface,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                child: Row(
+      backgroundColor: Colors.transparent,
+      body: AppVisualBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    _IconBubble(Icons.psychology, context.appAccent),
-                    SizedBox(width: 16),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Deep Focus",
-                            style: TextStyle(
-                              color: context.appText,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            "Keep going — you're on a streak!",
-                            style: TextStyle(
-                              color: context.appSubtleText,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        'Good morning, $name!',
+                        style: TextStyle(
+                          color: context.appText,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    Icon(
-                      Icons.local_fire_department,
-                      color: Colors.orangeAccent,
-                      size: 28,
+                    _HeaderIcon(
+                      icon: Icons.notifications_none_rounded,
+                      onTap: () {},
+                    ),
+                    const SizedBox(width: 8),
+                    _HeaderIcon(
+                      icon: Icons.person_outline_rounded,
+                      onTap: () {},
                     ),
                   ],
                 ),
-              ),
-              SizedBox(height: 12),
-
-              // ── Accuracy Card ────────────────────────────────────────────
-              _InfoCard(
-                color: context.appSurface,
-                child: Row(
-                  children: [
-                    _IconBubble(Icons.track_changes, context.appAccent),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Accuracy",
-                            style: TextStyle(
-                              color: context.appText,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            "Engage with slides for better recall.",
-                            style: TextStyle(
-                              color: context.appSubtleText,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      "--",
-                      style: TextStyle(
-                        color: context.appAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                      ),
-                    ),
+                const SizedBox(height: 24),
+                _SectionTitle('Today\'s Goal'),
+                const SizedBox(height: 10),
+                _GoalCard(onContinue: onNavigateToFeed),
+                const SizedBox(height: 24),
+                _SectionTitle('Continue Learning'),
+                const SizedBox(height: 10),
+                _LearningCard(onContinue: onNavigateToFeed),
+                const SizedBox(height: 24),
+                _SectionTitle('My Subjects'),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 9,
+                  runSpacing: 9,
+                  children: const [
+                    _SubjectChip('DBMS', Icons.storage_rounded),
+                    _SubjectChip('OS', Icons.memory_rounded),
+                    _SubjectChip('AI / ML', Icons.auto_awesome_rounded),
+                    _SubjectChip('CN', Icons.hub_rounded),
                   ],
                 ),
-              ),
-              SizedBox(height: 12),
-
-              // ── Completed & Streak ───────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: _InfoCard(
-                      color: context.appSurface,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            color: context.appAccent,
-                            size: 24,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            "${likedSlides.length}",
-                            style: TextStyle(
-                              color: context.appText,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24,
-                            ),
-                          ),
-                          Text(
-                            "Completed",
-                            style: TextStyle(
-                              color: context.appSubtleText,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
+                const SizedBox(height: 24),
+                _SectionTitle('Upcoming'),
+                const SizedBox(height: 10),
+                _UpcomingCard(),
+                const SizedBox(height: 24),
+                _SectionTitle('Your Progress'),
+                const SizedBox(height: 10),
+                _ProgressCard(),
+                const SizedBox(height: 24),
+                _SectionTitle('Ask AI Tutor'),
+                const SizedBox(height: 10),
+                _TutorCard(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ChatbotPlaceholderPage(),
                     ),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _InfoCard(
-                      color: context.appSurface,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.local_fire_department,
-                            color: Colors.orangeAccent,
-                            size: 24,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            "0",
-                            style: TextStyle(
-                              color: context.appText,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24,
-                            ),
-                          ),
-                          Text(
-                            "Day Streak",
-                            style: TextStyle(
-                              color: context.appSubtleText,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-
-              // ── Weekly Activity ──────────────────────────────────────────
-              _InfoCard(
-                color: context.appSurface,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Weekly Activity",
-                      style: TextStyle(
-                        color: context.appText,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(7, (i) {
-                        final days = ["M", "T", "W", "T", "F", "S", "S"];
-                        final h = [0.4, 0.7, 0.5, 0.9, 0.3, 0.6, 0.2];
-                        return Column(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 60 * h[i],
-                              decoration: BoxDecoration(
-                                color: context.appAccent.withValues(
-                                  alpha: 0.5 + h[i] * 0.5,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              days[i],
-                              style: TextStyle(
-                                color: context.appSubtleText,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        );
-                      }),
-                    ),
-                  ],
                 ),
-              ),
-              SizedBox(height: 24),
-
-              // ── Continue Learning ────────────────────────────────────────
-              Text(
-                "Continue Learning",
-                style: TextStyle(
-                  color: context.appText,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              SizedBox(height: 12),
-              ...List.generate(
-                topics.length,
-                (i) =>
-                    _ContinueCard(index: i, onTap: () => _navigateToSlide(i)),
-              ),
-              SizedBox(height: 24),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -356,57 +91,324 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
-class _StatCard extends StatelessWidget {
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  const _SectionTitle(this.title);
+  @override
+  Widget build(BuildContext context) => Text(
+    title,
+    style: TextStyle(
+      color: context.appText,
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+}
+
+class _HeaderIcon extends StatelessWidget {
   final IconData icon;
-  final Color iconColor;
-  final String label, value;
-  final VoidCallback? onTap;
-  const _StatCard({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.value,
-    this.onTap,
-  });
+  final VoidCallback onTap;
+  const _HeaderIcon({required this.icon, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(9),
+    radius: 14,
+    onTap: onTap,
+    child: Icon(icon, color: context.appMutedText, size: 20),
+  );
+}
+
+class _GoalCard extends StatelessWidget {
+  final VoidCallback onContinue;
+  const _GoalCard({required this.onContinue});
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(16),
+    radius: 20,
+    gradient: LinearGradient(
+      colors: [
+        context.appAccent.withValues(alpha: .25),
+        context.appPanelBottom,
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _RoundIcon(Icons.track_changes_rounded, context.appAccent),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Build a consistent learning habit',
+                style: TextStyle(
+                  color: context.appText,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            Text(
+              '28 / 45 min',
+              style: TextStyle(
+                color: context.appAccent,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        _Bar(value: .62, color: context.appAccent),
+        const SizedBox(height: 14),
+        Align(
+          alignment: Alignment.centerRight,
+          child: _ActionButton(label: 'Continue Learning', onTap: onContinue),
+        ),
+      ],
+    ),
+  );
+}
+
+class _LearningCard extends StatelessWidget {
+  final VoidCallback onContinue;
+  const _LearningCard({required this.onContinue});
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(16),
+    radius: 20,
+    child: Row(
+      children: [
+        _RoundIcon(Icons.menu_book_rounded, const Color(0xFFB0B0B0)),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'DBMS',
+                style: TextStyle(
+                  color: context.appAccent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'SQL & Normalization',
+                style: TextStyle(
+                  color: context.appText,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _Bar(value: .65, color: const Color(0xFFB0B0B0)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        _ActionButton(label: 'Continue', onTap: onContinue),
+      ],
+    ),
+  );
+}
+
+class _SubjectChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  const _SubjectChip(this.label, this.icon);
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+    radius: 15,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: context.appAccent, size: 17),
+        const SizedBox(width: 7),
+        Text(
+          label,
+          style: TextStyle(
+            color: context.appText,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _UpcomingCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(16),
+    radius: 20,
+    child: Row(
+      children: [
+        _RoundIcon(Icons.quiz_outlined, context.appAccent),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'DBMS Quiz',
+                style: TextStyle(
+                  color: context.appText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'SQL & Normalization',
+                style: TextStyle(color: context.appSubtleText, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          'Tomorrow',
+          style: TextStyle(
+            color: context.appAccent,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ProgressCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 10),
+    radius: 20,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: const [
+        _Metric('24', 'Lessons'),
+        _Metric('12h 40m', 'Study time'),
+        _Metric('86%', 'Average'),
+        _Metric('7', 'Day streak', fire: true),
+      ],
+    ),
+  );
+}
+
+class _Metric extends StatelessWidget {
+  final String value, label;
+  final bool fire;
+  const _Metric(this.value, this.label, {this.fire = false});
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Text(
+        fire ? '🔥 $value' : value,
+        style: TextStyle(
+          color: context.appText,
+          fontWeight: FontWeight.bold,
+          fontSize: 17,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(label, style: TextStyle(color: context.appSubtleText, fontSize: 10)),
+    ],
+  );
+}
+
+class _TutorCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _TutorCard({required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: context.appSurface,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: iconColor, size: 18),
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(16),
+    radius: 20,
+    onTap: onTap,
+    gradient: LinearGradient(
+      colors: [
+        const Color(0xFF555555).withValues(alpha: .24),
+        context.appPanelBottom,
+      ],
+    ),
+    child: Row(
+      children: [
+        _RoundIcon(Icons.smart_toy_outlined, const Color(0xFFB0B0B0)),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Text(
+            'What do you want to learn today?',
+            style: TextStyle(
+              color: context.appText,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
-            SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: context.appText,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+          ),
+        ),
+        Icon(Icons.arrow_forward_rounded, color: context.appAccent),
+      ],
+    ),
+  );
+}
+
+class ChatbotPlaceholderPage extends StatelessWidget {
+  const ChatbotPlaceholderPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.transparent,
+    body: AppVisualBackground(
+      child: SafeArea(
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back_rounded, color: context.appText),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: GlassPanel(
+                    padding: const EdgeInsets.all(28),
+                    radius: 24,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _RoundIcon(
+                          Icons.smart_toy_outlined,
+                          const Color(0xFFB0B0B0),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'AI Tutor',
+                          style: TextStyle(
+                            color: context.appText,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your personal learning assistant is coming soon.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: context.appSubtleText,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Text(
-                  label,
-                  style: TextStyle(color: context.appSubtleText, fontSize: 11),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -415,104 +417,57 @@ class _StatCard extends StatelessWidget {
   );
 }
 
-class _InfoCard extends StatelessWidget {
-  final Widget child;
-  final Color? color;
-  final LinearGradient? gradient;
-  const _InfoCard({required this.child, this.color, this.gradient});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: color,
-      gradient: gradient,
-      borderRadius: BorderRadius.circular(18),
-    ),
-    child: child,
-  );
-}
-
-class _IconBubble extends StatelessWidget {
+class _RoundIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
-  const _IconBubble(this.icon, this.color);
-
+  const _RoundIcon(this.icon, this.color);
   @override
   Widget build(BuildContext context) => Container(
-    padding: EdgeInsets.all(12),
+    padding: const EdgeInsets.all(11),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.2),
+      color: color.withValues(alpha: .18),
       shape: BoxShape.circle,
     ),
-    child: Icon(icon, color: color, size: 24),
+    child: Icon(icon, color: color, size: 22),
   );
 }
 
-class _ContinueCard extends StatelessWidget {
-  final int index;
-  final VoidCallback onTap;
-  const _ContinueCard({required this.index, required this.onTap});
+class _Bar extends StatelessWidget {
+  final double value;
+  final Color color;
+  const _Bar({required this.value, required this.color});
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(8),
+    child: LinearProgressIndicator(
+      value: value,
+      minHeight: 8,
+      backgroundColor: context.appFaintText.withValues(alpha: .18),
+      valueColor: AlwaysStoppedAnimation(color),
+    ),
+  );
+}
 
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _ActionButton({required this.label, required this.onTap});
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      margin: EdgeInsets.only(bottom: 10),
-      padding: EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color.alphaBlend(
-              context.appAccent.withValues(alpha: 0.12),
-              context.appSurface,
-            ),
-            context.appSurface,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
+        color: context.appAccent,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: context.appAccent.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.play_circle_filled,
-              color: context.appAccent,
-              size: 22,
-            ),
-          ),
-          SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  headings[index],
-                  style: TextStyle(
-                    color: context.appText,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  topics[index],
-                  style: TextStyle(color: context.appAccent, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, color: context.appFaintText, size: 16),
-        ],
+      child: Text(
+        label,
+        style: TextStyle(
+          color: context.appOnAccent,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     ),
   );
