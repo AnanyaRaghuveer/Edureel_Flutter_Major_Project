@@ -7,10 +7,10 @@ class AppTheme {
   /// panels, and the saturated electric blue used for the active controls.
   // Muted slate-blue brand keeps controls readable without the electric-blue
   // glow that made the dashboard feel overly bright.
-  static const Color brand = Color(0xFF292929);
-  static const Color midnight = Color(0xFF090909);
-  static const Color indigo = Color(0xFF151515);
-  static const Color periwinkle = Color(0xFF3A3A3A);
+  static const Color brand = Color(0xFFB9D4D9);
+  static const Color midnight = Color(0xFF080D11);
+  static const Color indigo = Color(0xFF0D151A);
+  static const Color periwinkle = Color(0xFF1E2A31);
 
   static final ThemeData light = ThemeData(
     useMaterial3: true,
@@ -40,15 +40,15 @@ class AppTheme {
     colorScheme: const ColorScheme.dark(
       primary: brand,
       onPrimary: Colors.white,
-      secondary: Color(0xFF777777),
+      secondary: Color(0xFF8AAAB0),
       onSecondary: Colors.white,
-      surface: Color(0xFF171717),
-      onSurface: Color(0xFFF2F2F2),
+      surface: Color(0xFF141E24),
+      onSurface: Color(0xFFF2F4F4),
       error: Color(0xFFFFB4AB),
       onError: Color(0xFF690005),
     ),
     scaffoldBackgroundColor: midnight,
-    cardColor: const Color(0xFF1C1C1C),
+    cardColor: const Color(0xFF141E24),
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
       foregroundColor: Color(0xFFF2F2F2),
@@ -67,19 +67,19 @@ extension AppThemeContext on BuildContext {
   Color get appSubtleText => appText.withValues(alpha: 0.45);
   Color get appFaintText => appText.withValues(alpha: 0.24);
   Color get appBorder => appText.withValues(alpha: 0.14);
-  Color get appAccent => isDarkMode ? Colors.white : const Color(0xFF202020);
-  Color get appOnAccent => isDarkMode ? const Color(0xFF171717) : Colors.white;
+  Color get appAccent => isDarkMode ? const Color(0xFFB9D4D9) : const Color(0xFF23434A);
+  Color get appOnAccent => isDarkMode ? const Color(0xFF0B1519) : Colors.white;
   bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
   Color get appCard =>
-      isDarkMode ? const Color(0xFF1C1C1C) : const Color(0xFFFFFFFF);
+      isDarkMode ? const Color(0xFF141E24) : const Color(0xFFFFFFFF);
   Color get appCardBorder =>
       isDarkMode ? const Color(0x2FFFFFFF) : const Color(0x1F000000);
   Color get appNavigation =>
-      isDarkMode ? const Color(0xE6101010) : const Color(0xEFFFFFFF);
+      isDarkMode ? const Color(0xE61A272D) : const Color(0xEFFFFFFF);
   Color get appPanelTop =>
-      isDarkMode ? const Color(0xA6222222) : const Color(0xEFFFFFFF);
+      isDarkMode ? const Color(0xA81E2A31) : const Color(0xEFFFFFFF);
   Color get appPanelBottom =>
-      isDarkMode ? const Color(0xC70E0E0E) : const Color(0xDDE8E8E6);
+      isDarkMode ? const Color(0xC70F191E) : const Color(0xDDE8E8E6);
   Color get appOnDark => const Color(0xFFF8F9FF);
 }
 
@@ -99,7 +99,7 @@ class AppVisualBackground extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: dark
-              ? const [AppTheme.midnight, Color(0xFF101010), Color(0xFF191919)]
+              ? const [Color(0xFF080D11), Color(0xFF0B1419), Color(0xFF101C22)]
               : const [Colors.white, Colors.white, Colors.white],
           stops: const [0, 0.48, 1],
         ),
@@ -111,10 +111,10 @@ class AppVisualBackground extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0.95, -0.95),
-                  radius: 1.05,
+                  center: const Alignment(-0.9, -0.8),
+                  radius: 1.15,
                   colors: dark
-                      ? const [Color(0x18000000), Colors.transparent]
+                      ? const [Color(0x184F7880), Colors.transparent]
                       : const [Color(0x0A000000), Colors.transparent],
                 ),
               ),
@@ -182,7 +182,7 @@ class GlassPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: panelGradient,
                   borderRadius: borderRadius,
-                  border: Border.all(color: context.appCardBorder),
+                  border: Border.all(color: context.appCardBorder.withValues(alpha: .65)),
                 ),
                 child: child,
               ),

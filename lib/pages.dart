@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'app_theme.dart';
+import 'auth_service.dart';
+import 'api_service.dart';
 import 'widgets.dart';
 
 // ── Profile Page ──────────────────────────────────────────────────────────────
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({required this.accessToken, super.key});
+
+  final String accessToken;
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -15,9 +19,10 @@ class _ProfilePageState extends State<ProfilePage> {
   late final _nameController = TextEditingController(text: userName);
   final _phoneController = TextEditingController(text: "");
   final _emailController = TextEditingController(text: "");
+  final _institutionController = TextEditingController(text: "");
 
-  // Predefined interest chips
-  final List<String> _allInterests = [
+  // Predefined skill chips
+  final List<String> _allSkills = [
     "Algorithms",
     "Data Structures",
     "Databases",
@@ -29,35 +34,91 @@ class _ProfilePageState extends State<ProfilePage> {
     "Cybersecurity",
     "Cloud Computing",
   ];
-  final Set<String> _selectedInterests = {};
+  final Set<String> _selectedSkills = {};
 
-  bool _saved = false;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await GoogleAuthService().fetchProfile(
+        widget.accessToken,
+      );
+      if (!mounted) return;
+      _nameController.text = profile.name;
+      _phoneController.text = profile.phone ?? '';
+      _emailController.text = profile.email;
+      _institutionController.text = profile.institution ?? '';
+      setState(() {
+        _selectedSkills
+          ..clear()
+          ..addAll(profile.skills);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not load profile: $error')));
+    }
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _institutionController.dispose();
     super.dispose();
   }
 
-  void _saveProfile() {
+  Future<void> _saveProfile() async {
+    if (_isSaving) return;
     FocusScope.of(context).unfocus();
-    setState(() {
-      userName = _nameController.text.trim();
-      _saved = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Profile saved!",
-          style: TextStyle(color: context.appOnAccent),
+    setState(() => _isSaving = true);
+    try {
+      final profile = await GoogleAuthService().updateProfile(
+        accessToken: widget.accessToken,
+        profile: UserProfile(
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          email: _emailController.text.trim(),
+          institution: _institutionController.text.trim().isEmpty
+              ? null
+              : _institutionController.text.trim(),
+          skills: _selectedSkills.toList(),
         ),
-        backgroundColor: context.appAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      );
+      if (!mounted) return;
+      userName = profile.name;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Profile saved!",
+            style: TextStyle(color: context.appOnAccent),
+          ),
+          backgroundColor: context.appAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save profile: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -68,13 +129,18 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          "Profile",
-          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
+          "PROFILE",
+          style: TextStyle(
+            color: context.appSubtleText,
+            fontSize: 12,
+            letterSpacing: 1.8,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         iconTheme: IconThemeData(color: context.appText),
         actions: [
           TextButton(
-            onPressed: _saveProfile,
+            onPressed: _isSaving ? null : _saveProfile,
             child: Text(
               "Save",
               style: TextStyle(
@@ -88,43 +154,79 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: AppVisualBackground(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar
               Center(
-                child: Stack(
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 48,
-                      backgroundColor: context.appAccent.withOpacity(0.2),
-                      child: Icon(
-                        Icons.person,
-                        color: context.appAccent,
-                        size: 52,
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: const Color(0xFF293B41),
+                          child: Icon(
+                            Icons.person,
+                            color: context.appAccent,
+                            size: 52,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: context.appAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.edit,
+                              color: context.appOnAccent,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      _nameController.text.trim().isEmpty
+                          ? 'Your learning profile'
+                          : _nameController.text.trim(),
+                      style: TextStyle(
+                        color: context.appText,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: context.appAccent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.edit,
-                          color: context.appOnAccent,
-                          size: 14,
-                        ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'CURIOUS · CONSISTENT · IN PROGRESS',
+                      style: TextStyle(
+                        color: context.appSubtleText,
+                        fontSize: 9,
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 26),
+              GlassPanel(
+                padding: const EdgeInsets.symmetric(vertical: 17),
+                radius: 22,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: const [
+                    _ProfileMetric('12h 40m', 'WATCHED'),
+                    _ProfileMetric('24', 'LESSONS'),
+                    _ProfileMetric('86%', 'PROGRESS'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
 
               // ── Input Fields ────────────────────────────────────────────
               _SectionLabel("Personal Info"),
@@ -152,27 +254,35 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: Icons.mail_outline,
                 keyboardType: TextInputType.emailAddress,
               ),
+              SizedBox(height: 16),
+              _ProfileField(
+                controller: _institutionController,
+                label: "Institution",
+                hint: "e.g. University or college name",
+                icon: Icons.school_outlined,
+                keyboardType: TextInputType.text,
+              ),
               SizedBox(height: 28),
 
-              // ── Fields of Interest ──────────────────────────────────────
-              _SectionLabel("Fields of Interest"),
+              // ── Skills ──────────────────────────────────────────────────
+              _SectionLabel("Skills"),
               SizedBox(height: 6),
               Text(
-                "Select topics you want to learn",
+                "Select your skills",
                 style: TextStyle(color: context.appSubtleText, fontSize: 13),
               ),
               SizedBox(height: 14),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
-                children: _allInterests.map((interest) {
-                  final selected = _selectedInterests.contains(interest);
+                children: _allSkills.map((skill) {
+                  final selected = _selectedSkills.contains(skill);
                   return GestureDetector(
                     onTap: () => setState(() {
                       if (selected) {
-                        _selectedInterests.remove(interest);
+                        _selectedSkills.remove(skill);
                       } else {
-                        _selectedInterests.add(interest);
+                        _selectedSkills.add(skill);
                       }
                     }),
                     child: AnimatedContainer(
@@ -205,7 +315,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             SizedBox(width: 4),
                           ],
                           Text(
-                            interest,
+                            skill,
                             style: TextStyle(
                               color: selected
                                   ? context.appOnAccent
@@ -228,10 +338,10 @@ class _ProfilePageState extends State<ProfilePage> {
               SizedBox(
                 width: double.infinity,
                 child: AppPrimaryButton(
-                  onPressed: _saveProfile,
+                  onPressed: _isSaving ? null : _saveProfile,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text(
-                    "Save Profile",
+                    _isSaving ? "Saving..." : "Save Profile",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
@@ -255,12 +365,41 @@ class _SectionLabel extends StatelessWidget {
       text,
       style: TextStyle(
         color: context.appText,
-        fontWeight: FontWeight.bold,
-        fontSize: 17,
-        letterSpacing: 0.3,
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+        letterSpacing: 1.5,
       ),
     );
   }
+}
+
+class _ProfileMetric extends StatelessWidget {
+  final String value;
+  final String label;
+  const _ProfileMetric(this.value, this.label);
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Text(
+        value,
+        style: TextStyle(
+          color: context.appText,
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 5),
+      Text(
+        label,
+        style: TextStyle(
+          color: context.appSubtleText,
+          fontSize: 9,
+          letterSpacing: 1.1,
+        ),
+      ),
+    ],
+  );
 }
 
 class _ProfileField extends StatelessWidget {
@@ -318,7 +457,9 @@ class _ProfileField extends StatelessWidget {
 
 // ── Liked Videos Page ─────────────────────────────────────────────────────────
 class LikedVideosPage extends StatefulWidget {
-  const LikedVideosPage({super.key});
+  const LikedVideosPage({required this.onOpenReel, super.key});
+
+  final ValueChanged<String> onOpenReel;
 
   @override
   _LikedVideosPageState createState() => _LikedVideosPageState();
@@ -338,8 +479,13 @@ class _LikedVideosPageState extends State<LikedVideosPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          "Liked Videos",
-          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
+          "LIKED",
+          style: TextStyle(
+            color: context.appSubtleText,
+            fontSize: 12,
+            letterSpacing: 1.8,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         iconTheme: IconThemeData(color: context.appText),
       ),
@@ -354,8 +500,14 @@ class _LikedVideosPageState extends State<LikedVideosPage> {
                 padding: EdgeInsets.all(18),
                 children: [
                   ...likedReelItems.map(
-                    (reel) =>
-                        ReelListTile(reel: reel, accentColor: Colors.redAccent),
+                    (reel) => ReelListTile(
+                      reel: reel,
+                      accentColor: Colors.redAccent,
+                      onTap: () {
+                        Navigator.pop(context);
+                        widget.onOpenReel(reel.id);
+                      },
+                    ),
                   ),
                   ...liked.map(
                     (slide) => SlideCard(
@@ -373,7 +525,9 @@ class _LikedVideosPageState extends State<LikedVideosPage> {
 
 // ── Saved Videos Page (Folder List) ──────────────────────────────────────────
 class SavedVideosPage extends StatefulWidget {
-  const SavedVideosPage({super.key});
+  const SavedVideosPage({required this.onOpenReel, super.key});
+
+  final ValueChanged<String> onOpenReel;
 
   @override
   _SavedVideosPageState createState() => _SavedVideosPageState();
@@ -435,8 +589,13 @@ class _SavedVideosPageState extends State<SavedVideosPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          "Saved Videos",
-          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
+          "MY LIBRARY",
+          style: TextStyle(
+            color: context.appSubtleText,
+            fontSize: 12,
+            letterSpacing: 1.8,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         iconTheme: IconThemeData(color: context.appText),
         actions: [
@@ -468,29 +627,43 @@ class _SavedVideosPageState extends State<SavedVideosPage> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            FolderDetailPage(folderName: folderName),
+                        builder: (_) => FolderDetailPage(
+                          folderName: folderName,
+                          onOpenReel: widget.onOpenReel,
+                        ),
                       ),
                     ).then((_) => setState(() {})),
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: GlassPanel(
-                        padding: const EdgeInsets.all(16),
-                        radius: 20,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 18,
+                        ),
+                        radius: 24,
+                        gradient: LinearGradient(
+                          colors: [context.appPanelTop, context.appPanelBottom],
+                        ),
                         child: Row(
                           children: [
                             Container(
-                              padding: EdgeInsets.all(12),
+                              width: 54,
+                              height: 64,
                               decoration: BoxDecoration(
-                                color: context.appAccent.withValues(
-                                  alpha: 0.12,
+                                borderRadius: BorderRadius.circular(17),
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF39585E),
+                                    Color(0xFF17262B),
+                                  ],
                                 ),
-                                shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                Icons.folder,
+                                Icons.folder_open_rounded,
                                 color: context.appAccent,
-                                size: 24,
+                                size: 25,
                               ),
                             ),
                             SizedBox(width: 14),
@@ -502,7 +675,7 @@ class _SavedVideosPageState extends State<SavedVideosPage> {
                                     folderName,
                                     style: TextStyle(
                                       color: context.appText,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w500,
                                       fontSize: 16,
                                     ),
                                   ),
@@ -517,9 +690,9 @@ class _SavedVideosPageState extends State<SavedVideosPage> {
                               ),
                             ),
                             Icon(
-                              Icons.arrow_forward_ios,
+                              Icons.arrow_outward_rounded,
                               color: context.appSubtleText,
-                              size: 16,
+                              size: 17,
                             ),
                           ],
                         ),
@@ -544,7 +717,12 @@ class _SavedVideosPageState extends State<SavedVideosPage> {
 // ── Folder Detail Page ────────────────────────────────────────────────────────
 class FolderDetailPage extends StatefulWidget {
   final String folderName;
-  const FolderDetailPage({super.key, required this.folderName});
+  final ValueChanged<String> onOpenReel;
+  const FolderDetailPage({
+    super.key,
+    required this.folderName,
+    required this.onOpenReel,
+  });
 
   @override
   _FolderDetailPageState createState() => _FolderDetailPageState();
@@ -593,6 +771,10 @@ class _FolderDetailPageState extends State<FolderDetailPage> {
                     (reel) => ReelListTile(
                       reel: reel,
                       accentColor: context.appAccent,
+                      onTap: () {
+                        Navigator.popUntil(context, (route) => route.isFirst);
+                        widget.onOpenReel(reel.id);
+                      },
                     ),
                   ),
                   ...slides.map(
@@ -614,10 +796,12 @@ class ReelListTile extends StatelessWidget {
     super.key,
     required this.reel,
     required this.accentColor,
+    required this.onTap,
   });
 
   final SavedReel reel;
   final Color accentColor;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -625,6 +809,7 @@ class ReelListTile extends StatelessWidget {
     child: GlassPanel(
       padding: const EdgeInsets.all(16),
       radius: 20,
+      onTap: onTap,
       gradient: LinearGradient(
         colors: [
           Color.alphaBlend(

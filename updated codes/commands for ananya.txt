@@ -1,7 +1,113 @@
-for apk- 
-cd /Users/ananyaraghuveer/edureel_app
-flutter pub get
-flutter build apk --release
+#for apk- 
+#cd /Users/ananyaraghuveer/edureel_app
+#flutter pub get
+#flutter build apk --release
+#
+flutter build apk --debug --dart-define=GOOGLE_WEB_CLIENT_ID=567155984994-bfpmkvbh8lj1hrgloe04l8f10rfek4v7.apps.googleusercontent.com
 
-to run flutter app - 
-flutter run -d chrome
+
+#
+#to run flutter app - 
+#flutter run -d chrome
+#
+#for git - 
+#git add .
+#git commit -m "description"
+#git push origin main
+
+#https://lisa-unevocable-undiscordantly.ngrok-free.dev/api/reels 
+
+
+
+> Task :app:signingReport
+Variant: debug
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+Variant: release
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+Variant: profile
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+Variant: debugAndroidTest
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+
+> Task :google_sign_in_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+
+> Task :path_provider_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+
+> Task :share_plus:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+
+> Task :video_player_android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: /Users/ananyaraghuveer/.android/debug.keystore
+Alias: AndroidDebugKey
+MD5: F6:43:7D:CF:90:67:4F:C7:63:67:E5:49:16:26:DE:BA
+SHA1: FF:27:FD:E2:B0:B3:B8:02:EE:D3:35:FB:4E:CA:A5:B1:EE:F8:50:84
+SHA-256: E7:6B:88:96:CA:7D:2D:2B:B9:7B:0B:9B:C5:63:8B:DA:22:91:09:A0:8A:12:FF:12:C0:05:F0:41:21:91:DB:0A
+Valid until: Sunday, 12 March, 2056
+----------
+
+[Incubating] Problems report is available at: file:///Users/ananyaraghuveer/edureel_app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 8s
+9 actionable tasks: 5 executed, 4 up-to-date

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
@@ -8,14 +7,50 @@ import 'package:video_player/video_player.dart';
 
 import 'app_state.dart';
 import 'app_theme.dart';
-import 'video_blob_stub.dart' if (dart.library.html) 'video_blob_web.dart';
+import 'auth_service.dart';
+import 'api_service.dart';
+
+class _ReelData {
+  const _ReelData({
+    required this.id,
+    required this.title,
+    required this.filename,
+    required this.videoUrl,
+  });
+
+  final int id;
+  final String title;
+  final String filename;
+  final String videoUrl;
+
+  factory _ReelData.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final videoUrl = json['videoUrl']?.toString();
+    if (id is! num || videoUrl == null || videoUrl.isEmpty) {
+      throw const FormatException('A reel is missing required API fields.');
+    }
+    final filename = json['filename']?.toString() ?? '';
+    return _ReelData(
+      id: id.toInt(),
+      title: json['title']?.toString() ?? filename,
+      filename: filename,
+      videoUrl: videoUrl,
+    );
+  }
+}
 
 class ReelScreen extends StatefulWidget {
+  final String accessToken;
   final VoidCallback onStateChanged;
   final bool isActive;
+  final String? reelToOpenId;
+  final VoidCallback onReelOpened;
   const ReelScreen({
+    required this.accessToken,
     required this.onStateChanged,
     required this.isActive,
+    required this.reelToOpenId,
+    required this.onReelOpened,
     Key? key,
   }) : super(key: key);
 
@@ -24,12 +59,14 @@ class ReelScreen extends StatefulWidget {
 }
 
 class _ReelScreenState extends State<ReelScreen> {
-  List<dynamic> dbReels = [];
+  List<_ReelData> dbReels = [];
+  final PageController _pageController = PageController();
   bool isLoading = true;
   int currentPage = 0;
   final Set<String> manuallyPausedReels = {};
   final Set<String> expandedDescriptionReels = {};
   String? playbackFeedbackReelId;
+  bool isMuted = false;
   Timer? _playbackFeedbackTimer;
   final Map<String, _ReelWatchStats> _watchStats = {};
   String? _activeReelId;
@@ -43,6 +80,7 @@ class _ReelScreenState extends State<ReelScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _reportCurrentReel('left the Reels screen');
     _playbackFeedbackTimer?.cancel();
     super.dispose();
@@ -51,9 +89,30 @@ class _ReelScreenState extends State<ReelScreen> {
   @override
   void didUpdateWidget(ReelScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isActive && !widget.isActive) {
-      _reportCurrentReel('left the Reels tab');
+    if (oldWidget.isActive != widget.isActive) {
+      if (!widget.isActive) {
+        _reportCurrentReel('left the Reels tab');
+      }
+      setState(() {});
     }
+    if (oldWidget.reelToOpenId != widget.reelToOpenId &&
+        widget.reelToOpenId != null) {
+      _jumpToReel(widget.reelToOpenId!);
+    }
+  }
+
+  void _jumpToReel(String reelId) {
+    final index = dbReels.indexWhere((reel) => reel.id.toString() == reelId);
+    if (index < 0) {
+      if (!isLoading) widget.onReelOpened();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      currentPage = index;
+      _pageController.jumpToPage(index);
+      widget.onReelOpened();
+    });
   }
 
   void _onPlaybackChanged({
@@ -89,7 +148,7 @@ class _ReelScreenState extends State<ReelScreen> {
   String? get _currentReelId {
     if (dbReels.isEmpty || currentPage >= dbReels.length) return null;
     final reel = dbReels[currentPage];
-    return reel['id']?.toString() ?? reel['videoUrl']?.toString();
+    return reel.id.toString();
   }
 
   void _stopWatch() {
@@ -142,27 +201,98 @@ class _ReelScreenState extends State<ReelScreen> {
   Future<void> fetchReelsFromDatabase() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          "https://lisa-unevocable-undiscordantly.ngrok-free.dev/api/reels",
-        ),
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "Accept": "application/json",
-        },
+        Uri.parse('$backendBaseUrl/api/reels'),
+        headers: {'Accept': 'application/json'},
       );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          dbReels = json.decode(response.body);
-          isLoading = false;
-        });
-      } else {
-        print("Server returned an error status: ${response.statusCode}");
-        setState(() => isLoading = false);
+      if (response.statusCode != 200) {
+        throw Exception('Server returned ${response.statusCode}');
       }
+
+      final responseData = jsonDecode(response.body);
+      if (responseData is! List) {
+        throw const FormatException('The reels API response must be a list.');
+      }
+      final reels = responseData
+          .map((reel) => _ReelData.fromJson(Map<String, dynamic>.from(reel)))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        dbReels = reels;
+        isLoading = false;
+      });
+      if (widget.reelToOpenId != null) {
+        _jumpToReel(widget.reelToOpenId!);
+      }
+      await _loadUserReelPreferences();
     } catch (e) {
-      print("Error connecting to ngrok backend: $e");
-      setState(() => isLoading = false);
+      debugPrint('Error connecting to EduReel backend: $e');
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _loadUserReelPreferences() async {
+    try {
+      final auth = GoogleAuthService();
+      final results = await Future.wait([
+        auth.fetchLikedReelIds(widget.accessToken),
+        auth.fetchSavedReelIds(widget.accessToken),
+      ]);
+      if (!mounted) return;
+
+      final likedIds = results[0];
+      final savedIds = results[1];
+      setState(() {
+        likedReels
+          ..clear()
+          ..addAll(likedIds);
+        savedReelsByFolder..clear();
+        if (savedIds.isNotEmpty) {
+          savedReelsByFolder['Saved Reels'] = savedIds;
+        }
+        for (final reel in dbReels) {
+          final id = reel.id.toString();
+          if (likedIds.contains(id) || savedIds.contains(id)) {
+            reelsById[id] = SavedReel(
+              id: id,
+              title: reel.title,
+              videoUrl: reel.videoUrl,
+            );
+          }
+        }
+      });
+      widget.onStateChanged();
+    } catch (error) {
+      debugPrint('Error loading user reel preferences: $error');
+    }
+  }
+
+  Future<void> _likeReel({
+    required String reelId,
+    required String title,
+    required String videoUrl,
+  }) async {
+    if (likedReels.contains(reelId)) return;
+    reelsById[reelId] = SavedReel(id: reelId, title: title, videoUrl: videoUrl);
+    likedReels.add(reelId);
+    setState(() {});
+    widget.onStateChanged();
+
+    try {
+      await GoogleAuthService().setReelLiked(
+        accessToken: widget.accessToken,
+        reelId: reelId,
+        liked: true,
+      );
+    } catch (error) {
+      likedReels.remove(reelId);
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not like reel: $error')));
+      }
+      widget.onStateChanged();
     }
   }
 
@@ -198,6 +328,7 @@ class _ReelScreenState extends State<ReelScreen> {
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: PageView.builder(
+          controller: _pageController,
           scrollDirection: Axis.vertical,
           physics: const PageScrollPhysics(),
           itemCount: dbReels.length,
@@ -207,211 +338,218 @@ class _ReelScreenState extends State<ReelScreen> {
           },
           itemBuilder: (context, index) {
             final reelData = dbReels[index];
-            final String videoUrl = reelData['videoUrl'];
-            final String title = reelData['title'] ?? "Untitled Short";
-            final String description =
-                reelData['description']?.toString().trim() ?? '';
-            final String reelId = reelData['id']?.toString() ?? videoUrl;
+            final String videoUrl = reelData.videoUrl;
+            final String title = reelData.title.isEmpty
+                ? 'Untitled Short'
+                : reelData.title;
+            final String description = '';
+            final String reelId = reelData.id.toString();
             final bool isDescriptionExpanded = expandedDescriptionReels
                 .contains(reelId);
             final bool isCurrent = index == currentPage;
 
-            return GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () => _togglePlayback(reelId),
-              onDoubleTap: () {
-                if (!likedReels.contains(reelId)) {
-                  reelsById[reelId] = SavedReel(
-                    id: reelId,
-                    title: title,
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: VideoPlayerItem(
                     videoUrl: videoUrl,
-                  );
-                  likedReels.add(reelId);
-                  setState(() {});
-                }
-              },
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: VideoPlayerItem(
-                      videoUrl: videoUrl,
-                      shouldPlay:
-                          isCurrent &&
-                          widget.isActive &&
-                          !manuallyPausedReels.contains(reelId),
-                      onPlaybackChanged: (isPlaying, videoDuration) =>
-                          _onPlaybackChanged(
-                            reelId: reelId,
-                            title: title,
-                            videoDuration: videoDuration,
-                            isPlaying: isPlaying,
-                          ),
+                    isMuted: isMuted,
+                    shouldPlay:
+                        isCurrent &&
+                        widget.isActive &&
+                        !manuallyPausedReels.contains(reelId),
+                    onPlaybackChanged: (isPlaying, videoDuration) =>
+                        _onPlaybackChanged(
+                          reelId: reelId,
+                          title: title,
+                          videoDuration: videoDuration,
+                          isPlaying: isPlaying,
+                        ),
+                  ),
+                ),
+                // This overlay sits above the platform video surface. On
+                // Flutter Web, the <video> element can otherwise consume
+                // the tap before the Reel widget receives it.
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _togglePlayback(reelId),
+                    onDoubleTap: () {
+                      _likeReel(
+                        reelId: reelId,
+                        title: title,
+                        videoUrl: videoUrl,
+                      );
+                    },
+                  ),
+                ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xA4081318),
+                        Color(0x180D1B20),
+                        Color(0xE20A1216),
+                      ],
+                      stops: [0, 0.42, 1],
                     ),
                   ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0x91060606),
-                          Color(0x180F0F0F),
-                          Color(0xC71B1B1B),
-                        ],
-                        stops: [0, 0.42, 1],
+                ),
+                if (playbackFeedbackReelId == reelId)
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: const BoxDecoration(
+                        color: Color(0x99000000),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        manuallyPausedReels.contains(reelId)
+                            ? Icons.play_arrow
+                            : Icons.pause,
+                        color: Colors.white,
+                        size: 44,
                       ),
                     ),
                   ),
-                  if (playbackFeedbackReelId == reelId)
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: const BoxDecoration(
-                          color: Color(0x99000000),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          manuallyPausedReels.contains(reelId)
-                              ? Icons.play_arrow
-                              : Icons.pause,
-                          color: Colors.white,
-                          size: 44,
-                        ),
-                      ),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 32,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              GlassPanel(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 11,
-                                  vertical: 7,
-                                ),
-                                radius: 17,
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xA82B2B2B),
-                                    Color(0xA3181818),
-                                  ],
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.verified_user,
-                                      color: Colors.white,
-                                      size: 17,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      "For You",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 32,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GlassPanel(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 11,
+                                vertical: 7,
                               ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xB21B1B1B),
-                                  borderRadius: BorderRadius.circular(13),
-                                  border: Border.all(
-                                    color: const Color(0x45FFFFFF),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "DATABASE SHORTS",
-                                  style: TextStyle(
+                              radius: 17,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xA82B2B2B), Color(0xA3181818)],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.verified_user,
                                     color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    letterSpacing: 1.1,
+                                    size: 17,
                                   ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    "For You",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xB21B1B1B),
+                                borderRadius: BorderRadius.circular(13),
+                                border: Border.all(
+                                  color: const Color(0x45FFFFFF),
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                title,
-                                style: const TextStyle(
+                              child: const Text(
+                                "DATABASE SHORTS",
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  height: 1.15,
+                                  fontSize: 12,
+                                  letterSpacing: 1.1,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (description.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Text(
-                                  description,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    height: 1.25,
-                                  ),
-                                  maxLines: isDescriptionExpanded ? null : 2,
-                                  overflow: isDescriptionExpanded
-                                      ? TextOverflow.visible
-                                      : TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                height: 1.15,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (description.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                description,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  height: 1.25,
                                 ),
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      if (isDescriptionExpanded) {
-                                        expandedDescriptionReels.remove(reelId);
-                                      } else {
-                                        expandedDescriptionReels.add(reelId);
-                                      }
-                                    });
-                                  },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.white70,
-                                    padding: EdgeInsets.zero,
-                                    minimumSize: const Size(0, 28),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  child: Text(
-                                    isDescriptionExpanded ? 'less' : 'more...',
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
+                                maxLines: isDescriptionExpanded ? null : 2,
+                                overflow: isDescriptionExpanded
+                                    ? TextOverflow.visible
+                                    : TextOverflow.ellipsis,
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    if (isDescriptionExpanded) {
+                                      expandedDescriptionReels.remove(reelId);
+                                    } else {
+                                      expandedDescriptionReels.add(reelId);
+                                    }
+                                  });
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white70,
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(0, 28),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
-                              ],
+                                child: Text(
+                                  isDescriptionExpanded ? 'less' : 'more...',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  Positioned(
-                    right: 14,
-                    bottom: 100,
+                ),
+                Positioned(
+                  right: 14,
+                  top: 0,
+                  bottom: 0,
+                  child: Align(
+                    alignment: Alignment.centerRight,
                     child: _ReelActions(
+                      accessToken: widget.accessToken,
                       reelId: reelId,
                       title: title,
                       videoUrl: videoUrl,
+                      isMuted: isMuted,
+                      onToggleMute: () => setState(() => isMuted = !isMuted),
                       onChanged: () => setState(() {}),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),
@@ -422,16 +560,57 @@ class _ReelScreenState extends State<ReelScreen> {
 
 class _ReelActions extends StatelessWidget {
   const _ReelActions({
+    required this.accessToken,
     required this.reelId,
     required this.title,
     required this.videoUrl,
+    required this.isMuted,
+    required this.onToggleMute,
     required this.onChanged,
   });
 
+  final String accessToken;
   final String reelId;
   final String title;
   final String videoUrl;
+  final bool isMuted;
+  final VoidCallback onToggleMute;
   final VoidCallback onChanged;
+
+  Future<void> _toggleLike(BuildContext context) async {
+    final wasLiked = likedReels.contains(reelId);
+    if (wasLiked) {
+      likedReels.remove(reelId);
+    } else {
+      reelsById[reelId] = SavedReel(
+        id: reelId,
+        title: title,
+        videoUrl: videoUrl,
+      );
+      likedReels.add(reelId);
+    }
+    onChanged();
+
+    try {
+      await GoogleAuthService().setReelLiked(
+        accessToken: accessToken,
+        reelId: reelId,
+        liked: !wasLiked,
+      );
+    } catch (error) {
+      if (wasLiked) {
+        likedReels.add(reelId);
+      } else {
+        likedReels.remove(reelId);
+      }
+      onChanged();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update like: $error')),
+        );
+      }
+    }
+  }
 
   Future<void> _shareVideo(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -442,10 +621,7 @@ class _ReelActions extends StatelessWidget {
     try {
       final response = await http.get(
         Uri.parse(videoUrl),
-        headers: const {
-          'ngrok-skip-browser-warning': 'true',
-          'Accept': 'video/mp4',
-        },
+        headers: const {'Accept': 'video/mp4'},
       );
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         throw Exception('Video download failed (${response.statusCode})');
@@ -566,10 +742,52 @@ class _ReelActions extends StatelessWidget {
     savedFolders.putIfAbsent(folder, () => {});
     savedReelsByFolder.putIfAbsent(folder, () => {}).add(reelId);
     onChanged();
+    try {
+      await GoogleAuthService().setReelSaved(
+        accessToken: accessToken,
+        reelId: reelId,
+        saved: true,
+      );
+    } catch (error) {
+      savedReelsByFolder[folder]?.remove(reelId);
+      onChanged();
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not save reel: $error')));
+      }
+      return;
+    }
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Saved to $folder')));
+    }
+  }
+
+  Future<void> _unsave(BuildContext context) async {
+    final previousFolders = <String>{};
+    for (final entry in savedReelsByFolder.entries) {
+      if (entry.value.remove(reelId)) previousFolders.add(entry.key);
+    }
+    onChanged();
+
+    try {
+      await GoogleAuthService().setReelSaved(
+        accessToken: accessToken,
+        reelId: reelId,
+        saved: false,
+      );
+    } catch (error) {
+      for (final folder in previousFolders) {
+        savedReelsByFolder.putIfAbsent(folder, () => {}).add(reelId);
+      }
+      onChanged();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not remove saved reel: $error')),
+        );
+      }
     }
   }
 
@@ -578,41 +796,37 @@ class _ReelActions extends StatelessWidget {
     final liked = likedReels.contains(reelId);
     final saved = savedReelsByFolder.values.any((ids) => ids.contains(reelId));
     return Column(
-      children: [
-        _ActionButton(
-          icon: liked ? Icons.favorite : Icons.favorite_border,
-          color: liked ? Colors.redAccent : Colors.white,
-          label: 'Like',
-          onTap: () {
-            if (liked) {
-              likedReels.remove(reelId);
-            } else {
-              reelsById[reelId] = SavedReel(
-                id: reelId,
-                title: title,
-                videoUrl: videoUrl,
-              );
-              likedReels.add(reelId);
-            }
-            onChanged();
-          },
-        ),
-        const SizedBox(height: 18),
-        _ActionButton(
-          icon: saved ? Icons.bookmark : Icons.bookmark_border,
-          color: Colors.white,
-          label: 'Save',
-          onTap: () => _chooseFolder(context),
-        ),
-        const SizedBox(height: 18),
-        _ActionButton(
-          icon: Icons.share_outlined,
-          color: Colors.white,
-          label: 'Share',
-          onTap: () => _shareVideo(context),
-        ),
-      ],
-    );
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ActionButton(
+            icon: liked ? Icons.favorite : Icons.favorite_border,
+            color: liked ? Colors.redAccent : Colors.white,
+            label: 'Like',
+            onTap: () => _toggleLike(context),
+          ),
+          const SizedBox(height: 2),
+          _ActionButton(
+            icon: saved ? Icons.bookmark : Icons.bookmark_border,
+            color: Colors.white,
+            label: 'Save',
+            onTap: () => saved ? _unsave(context) : _chooseFolder(context),
+          ),
+          const SizedBox(height: 2),
+          _ActionButton(
+            icon: isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+            color: Colors.white,
+            label: isMuted ? 'Unmute' : 'Mute',
+            onTap: onToggleMute,
+          ),
+          const SizedBox(height: 2),
+          _ActionButton(
+            icon: Icons.share_outlined,
+            color: Colors.white,
+            label: 'Share',
+            onTap: () => _shareVideo(context),
+          ),
+        ],
+      );
   }
 }
 
@@ -630,22 +844,34 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 62,
+    width: 54,
     child: GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 27),
-            const SizedBox(height: 4),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0x70203339),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x35FFFFFF)),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x33000000), blurRadius: 12),
+                ],
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(height: 3),
             Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -659,11 +885,13 @@ class _ActionButton extends StatelessWidget {
 // ── Isolated Video Player Component for Clean Memory Management ──
 class VideoPlayerItem extends StatefulWidget {
   final String videoUrl;
+  final bool isMuted;
   final bool shouldPlay;
   final void Function(bool isPlaying, Duration videoDuration) onPlaybackChanged;
 
   const VideoPlayerItem({
     required this.videoUrl,
+    required this.isMuted,
     required this.shouldPlay,
     required this.onPlaybackChanged,
     Key? key,
@@ -687,45 +915,27 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
   Future<void> initializePlayer() async {
     try {
-      if (kIsWeb) {
-        // THE FIX: download the video ourselves (with the header ngrok
-        // needs to skip its warning page), then hand the player a local
-        // blob URL instead of the raw ngrok link.
-        final response = await http.get(
-          Uri.parse(widget.videoUrl),
-          headers: {
-            "ngrok-skip-browser-warning": "true",
-            "Accept": "video/mp4",
-          },
-        );
-
-        if (response.statusCode != 200) {
-          throw Exception("Server returned ${response.statusCode}");
-        }
-
-        final blobUrl = createBlobUrl(response.bodyBytes);
-        _controller = VideoPlayerController.networkUrl(Uri.parse(blobUrl));
-      } else {
-        // Android/iOS/desktop can send headers directly, no workaround needed.
-        _controller = VideoPlayerController.networkUrl(
-          Uri.parse(widget.videoUrl),
-          httpHeaders: {"ngrok-skip-browser-warning": "true"},
-        );
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+      );
+      _controller = controller;
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
       }
-
-      await _controller!.initialize();
-      if (!mounted) return;
-      _controller!.addListener(_reportPlaybackState);
+      await controller.setVolume(widget.isMuted ? 0 : 1);
+      controller.addListener(_reportPlaybackState);
+      controller.setLooping(true);
       setState(() {
         isInitialized = true;
-        _controller!.setLooping(true);
-        if (widget.shouldPlay) {
-          _controller!.play();
-        }
       });
+      if (widget.shouldPlay) {
+        await controller.play();
+      }
       _reportPlaybackState();
     } catch (error) {
-      print("Video loading error on: ${widget.videoUrl} -> Error: $error");
+      debugPrint("Video loading error on: ${widget.videoUrl} -> Error: $error");
       if (mounted) {
         setState(() => hasError = true);
       }
@@ -735,12 +945,27 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   @override
   void didUpdateWidget(VideoPlayerItem oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoUrl != widget.videoUrl) {
+      _controller?.removeListener(_reportPlaybackState);
+      _controller?.dispose();
+      _controller = null;
+      isInitialized = false;
+      hasError = false;
+      initializePlayer();
+      return;
+    }
     if (!isInitialized || hasError || _controller == null) return;
-
+    if (oldWidget.isMuted != widget.isMuted) {
+      _controller!.setVolume(widget.isMuted ? 0 : 1);
+    }
     if (widget.shouldPlay) {
-      _controller!.play();
+      if (!_controller!.value.isPlaying) {
+        _controller!.play();
+      }
     } else {
-      _controller!.pause();
+      if (_controller!.value.isPlaying) {
+        _controller!.pause();
+      }
     }
   }
 
